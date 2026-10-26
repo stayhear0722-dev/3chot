@@ -2,6 +2,7 @@
 // items through these functions; visibility, release gate and body licences are applied here.
 import type { CategoryKey, ChannelKey } from "@aihot/contracts/taxonomy";
 import type { FeedItemSummary, ItemSummary, MediaView, SourceKind, XPostView } from "@aihot/contracts/site";
+import { HOME_FOLD_EXCLUDED_IDS } from "@aihot/industry/home-fold-exclusions";
 import { sql, type Db } from "../db.ts";
 import { proxiedImage, proxiedImageSet } from "../media/imgproxy.ts";
 import { displayTags } from "./rules.ts";
@@ -81,9 +82,17 @@ export function listedCondition(now: Date) {
   return sql`p.visibility = 'public' AND (NOT p.selected OR p.visible_after <= ${now})`;
 }
 
-/** Selected set as shown on the home timeline, v1 selected mode and RSS. */
+/**
+ * Ids kept off homepage prominence (selected timeline and the topic column the
+ * homepage embeds). Detail, /all and search do not use this.
+ */
+export function homeFoldExclusion() {
+  return sql`p.article_id <> ALL(${[...HOME_FOLD_EXCLUDED_IDS]}::text[])`;
+}
+
+/** Selected set on the home timeline, v1 selected mode and RSS, minus the homepage-fold denylist. */
 export function selectedCondition(now: Date) {
-  return sql`p.visibility = 'public' AND p.selected AND p.visible_after <= ${now}`;
+  return sql`p.visibility = 'public' AND p.selected AND p.visible_after <= ${now} AND ${homeFoldExclusion()}`;
 }
 
 export function channelCondition(channel: ChannelKey | null | undefined) {
