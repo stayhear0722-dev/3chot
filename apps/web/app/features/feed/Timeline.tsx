@@ -1,7 +1,7 @@
 // The day-grouped feed (精选 home, topics): a time rail with cards on desktop, dated rows under grey
 // day bars on phones. Keeps its place across back navigation and loads further pages. There is no
 // "new items" prompt: readers refresh for the latest head (feedback #1199).
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useLocation, useNavigation } from "react-router";
 import { Collapse } from "../../components/ui/Presence";
 import type { TimelineCard, TimelineFilters, TimelineResponse } from "@aihot/contracts/site";
@@ -108,7 +108,25 @@ export function TimelineSlot({ at, children, fresh = false, delay = 0, dataKey }
   );
 }
 
-export function Timeline({ initial, filters }: { initial: TimelineResponse; filters: TimelineFilters }) {
+export function Timeline({
+  initial,
+  filters,
+  apiPath = "/api/site/timeline",
+  extraQuery,
+  autoBatches = AUTO_BATCHES,
+  refreshOnChange = false,
+  emptyState,
+}: {
+  initial: TimelineResponse;
+  filters: TimelineFilters;
+  /** Further pages. The home timeline stays on /api/site/timeline. */
+  apiPath?: string;
+  extraQuery?: Record<string, string | number | null | undefined>;
+  autoBatches?: number;
+  /** Replace the loaded list when the same filters come back with a new generatedAt (a manual refresh). */
+  refreshOnChange?: boolean;
+  emptyState?: { title: string; description?: ReactNode };
+}) {
   const location = useLocation();
   const navigation = useNavigation();
   const readSet = useReadSet();
@@ -133,13 +151,15 @@ export function Timeline({ initial, filters }: { initial: TimelineResponse; filt
   // Filters (i.e. the loader data) changed. A page still loading for the old filters is cancelled, and a
   // response that arrives anyway is dropped (it belongs to another list and cursor). Back or forward to a
   // filter already visited restores what that history entry had loaded and folded; a new one starts over.
-  const filterKey = filterQuery(filters);
+  const filterKey = filterQuery(filters, extraQuery);
   const lastFilterKey = useRef(filterKey);
+  const lastRevision = useRef(initial.generatedAt);
   const pageRequest = useRef<AbortController | null>(null);
   useEffect(() => () => pageRequest.current?.abort(), []);
   useLayoutEffect(() => {
     if (lastFilterKey.current !== filterKey) {
       lastFilterKey.current = filterKey;
+      lastRevision.current = initial.generatedAt;
       pageRequest.current?.abort();
       pageRequest.current = null;
       setLoadingMore(false);
@@ -150,8 +170,16 @@ export function Timeline({ initial, filters }: { initial: TimelineResponse; filt
       } else {
         setState(fromResponse(initial));
       }
+      return;
     }
-  }, [filterKey, initial, historyKey]);
+    if (refreshOnChange && lastRevision.current !== initial.generatedAt) {
+      lastRevision.current = initial.generatedAt;
+      pageRequest.current?.abort();
+      pageRequest.current = null;
+      setLoadingMore(false);
+      setState(fromResponse(initial));
+    }
+  }, [filterKey, initial, historyKey, refreshOnChange]);
 
   useLayoutEffect(() => {
     if (restoredRef.current) return;
@@ -201,17 +229,19 @@ export function Timeline({ initial, filters }: { initial: TimelineResponse; filt
   const loadMore = useCallback(async () => {
     const s = stateRef.current;
     if (!s.nextCursor || pageRequest.current) return;
-    const key = filterQuery(filters);
+    const key = filterKey;
     const controller = new AbortController();
     pageRequest.current = controller;
     const current = () => lastFilterKey.current === key && !controller.signal.aborted;
     setLoadingMore(true);
     setLoadError(false);
     try {
-      const res = await fetch(`/api/site/timeline?${filterQuery(filters, { cursor: s.nextCursor })}`, { signal: controller.signal });
+      const pageParams = new URLSearchParams(key);
+      pageParams.set("cursor", s.nextCursor);
+      const res = await fetch(`${apiPath}?${pageParams}`, { signal: controller.signal });
       if (res.status === 400) {
         // Cursor no longer fits: start over from the head.
-        const head = await fetch(`/api/site/timeline?${key}`, { signal: controller.signal });
+        const head = await fetch(`${apiPath}?${key}`, { signal: controller.signal });
         if (head.ok && current()) setState(fromResponse((await head.json()) as TimelineResponse));
         return;
       }
@@ -238,19 +268,19 @@ export function Timeline({ initial, filters }: { initial: TimelineResponse; filt
         setLoadingMore(false);
       }
     }
-  }, [filters]);
+  }, [filterKey, apiPath]);
 
   // Auto-load a few batches when the sentinel nears the viewport, then hand over to a button.
   const sentinel = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const el = sentinel.current;
-    if (!el || !state.nextCursor || state.batches >= AUTO_BATCHES) return;
+    if (!el || !state.nextCursor || state.batches >= autoBatches) return;
     const io = new IntersectionObserver((entries) => {
       if (entries.some((e) => e.isIntersecting)) void loadMore();
     }, { rootMargin: "900px 0px" });
     io.observe(el);
     return () => io.disconnect();
-  }, [state.nextCursor, state.batches, loadMore]);
+  }, [state.nextCursor, state.batches, loadMore, autoBatches]);
 
   const today = beijingDate(Date.now());
   const days = useMemo(() => {
@@ -272,7 +302,7 @@ export function Timeline({ initial, filters }: { initial: TimelineResponse; filt
     <div className="relative">
       {days.length === 0 && (
         <div className="lg:card">
-          <EmptyState title="这个筛选下还没有精选内容">换个类别看看，或者去全部动态里找找。</EmptyState>
+          <EmptyState title={emptyState?.title ?? "这个筛选下还没有精选内容"}>{emptyState?.description ?? "换个类别看看，或者去全部动态里找找。"}</EmptyState>
         </div>
       )}
 
@@ -300,7 +330,7 @@ export function Timeline({ initial, filters }: { initial: TimelineResponse; filt
       })}
 
       <div ref={sentinel} aria-hidden="true" />
-      <FeedEnd loading={loadingMore} error={loadError} hasMore={!!state.nextCursor} manual={state.batches >= AUTO_BATCHES} empty={state.cards.length === 0} onMore={loadMore} />
+      <FeedEnd loading={loadingMore} error={loadError} hasMore={!!state.nextCursor} manual={state.batches >= autoBatches} empty={state.cards.length === 0} onMore={loadMore} />
     </div>
   );
 }

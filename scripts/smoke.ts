@@ -29,6 +29,15 @@ const MACHINE: Array<[path: string, type: RegExp]> = [
 const LEADERBOARD = FEATURES.leaderboard ? ["/leaderboard", "/leaderboard/rules", "/leaderboard/sources"] : [];
 PAGES.push(...LEADERBOARD);
 if (FEATURES.codexResetMonitor) PAGES.push("/codex-reset");
+if (FEATURES.overseas) {
+  PAGES.push("/overseas", "/overseas?focus=official", "/overseas?focus=competitor", "/overseas?focus=creator", "/overseas?focus=design", "/overseas?focus=creator&view=profiles");
+  MACHINE.push(
+    ["/api/site/overseas-operations", /json/],
+    ["/api/site/overseas-operations?focus=official", /json/],
+    ["/api/site/overseas-operations/creators", /json/],
+    ["/api/site/overseas-design-resources", /json/],
+  );
+}
 
 let failed = 0;
 async function check(path: string, expect: (res: Response, body: string) => string | null) {

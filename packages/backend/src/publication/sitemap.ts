@@ -41,6 +41,7 @@ async function build(): Promise<string> {
     { loc: "/all", lastmod: now, changefreq: "hourly", priority: 0.9 },
     { loc: "/daily", lastmod: latestDaily?.t, changefreq: "daily", priority: 0.9 },
     { loc: "/hot", lastmod: now, changefreq: "hourly", priority: 0.9 },
+    ...(FEATURES.overseas ? [{ loc: "/overseas", lastmod: now, changefreq: "hourly", priority: 0.8 }] : []),
     { loc: "/daily/archive", lastmod: latestDaily?.t, changefreq: "daily", priority: 0.7 },
     { loc: "/weekly", changefreq: "weekly", priority: 0.7 },
     { loc: "/monthly", changefreq: "monthly", priority: 0.6 },

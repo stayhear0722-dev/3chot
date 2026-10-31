@@ -55,6 +55,7 @@ export function llmsTxt(opts: { hasDailies: boolean; hasWeekly: boolean; hasMont
   lines.push("## 网站主要页面", "");
   lines.push(`- [首页 · 精选](${u("/")}): 每日精选动态`);
   lines.push(`- [热点榜](${u("/hot")}): 过去 48 小时内被多个独立信源共同讨论的事件`);
+  if (FEATURES.overseas) lines.push(`- [海外运营情报](${u("/overseas")}): 美国站官方资讯、线充竞品、达人素材与设计参考`);
   lines.push(`- [全部动态](${u("/all")}): 全部公开资讯，可按分类筛选`);
   if (opts.hasDailies) {
     lines.push(`- [${daily}](${u("/daily")}): 每日精编汇总`);

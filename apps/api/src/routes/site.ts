@@ -1,6 +1,8 @@
 // First-party site API (/api/site/*). Not public, not versioned, never called /api/v2.
 // Reads through the same public read layer as v1; no cookies are read or set.
 import { FEATURES } from "@aihot/industry/features";
+import { loadOverseasCreators, loadOverseasOperations, OverseasQueryError, parseOverseasOperationsQuery } from "@aihot/backend/publication/overseas";
+import { loadOverseasDesignResources } from "@aihot/backend/publication/overseas-design";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { isCategoryKey, isChannelKey, type CategoryKey, type ChannelKey } from "@aihot/contracts/taxonomy";
 import { InvalidCursorError } from "@aihot/backend/lib/cursor";
@@ -45,7 +47,7 @@ export function siteHandler(fn: Handler): Handler {
     try {
       return await fn(req, reply);
     } catch (error) {
-      if (error instanceof BadRequest) return sendProblem(req, reply, { status: 400, code: "invalid_request", detail: error.message });
+      if (error instanceof BadRequest || error instanceof OverseasQueryError) return sendProblem(req, reply, { status: 400, code: "invalid_request", detail: error.message });
       if (error instanceof InvalidCursorError) return sendProblem(req, reply, { status: 400, code: "invalid_cursor", detail: error.message });
       if (error instanceof SearchBusyError) {
         return sendProblem(req, reply, { status: 503, code: "temporarily_unavailable", detail: "search busy", retryAfter: error.retryAfter });
@@ -85,6 +87,7 @@ export function registerSite(app: FastifyInstance) {
   }));
 
   if (FEATURES.codexResetMonitor) registerCodexReset(app);
+  if (FEATURES.overseas) registerOverseas(app);
 
   app.get("/api/site/timeline", siteHandler(async (req, reply) => {
     const q = looseQuery(req);
@@ -256,6 +259,26 @@ export function registerSite(app: FastifyInstance) {
       .header("Cache-Control", "public, max-age=300, s-maxage=300")
       .header("X-Robots-Tag", "noindex")
       .send(md.body);
+  }));
+}
+
+/** Overseas column. focus=design is a different resource and is rejected here. */
+function registerOverseas(app: FastifyInstance) {
+  app.get("/api/site/overseas-operations", siteHandler(async (req, reply) => {
+    const data = await loadOverseasOperations(parseOverseasOperationsQuery(looseQuery(req)));
+    const { generatedAt: _, ...content } = data;
+    return sendJsonWithEtag(req, reply, data, { etagPrefix: "overseas", cacheControl: "public, max-age=60, s-maxage=60", etagOf: content });
+  }));
+
+  app.get("/api/site/overseas-operations/creators", siteHandler(async (req, reply) => {
+    const data = await loadOverseasCreators();
+    const { generatedAt: _, ...content } = data;
+    return sendJsonWithEtag(req, reply, data, { etagPrefix: "overseas-creators", cacheControl: "public, max-age=60, s-maxage=60", etagOf: content });
+  }));
+
+  app.get("/api/site/overseas-design-resources", siteHandler(async (req, reply) => {
+    const data = await loadOverseasDesignResources();
+    return sendJsonWithEtag(req, reply, data, { etagPrefix: "overseas-design", cacheControl: "public, max-age=60, s-maxage=60" });
   }));
 }
 
