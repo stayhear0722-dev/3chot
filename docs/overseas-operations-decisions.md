@@ -256,3 +256,26 @@ API、主worker和独立YouTube共享既有`aihot_data`卷。仍在公开展示�
 已将标题设为主字段，视频保留据公开文案形成的中文概况，设计补充18条依据现有标题／摘要整理的中文短标题和一句概况，保留英文原题。详情页完整显示封面、概况、原帖／3CHOT链接、指标及系统记录，不受画册隐藏字段影响。4条旧资讯评分及两轮五维明细原样留存，字段明确命名“系统记录（非视频质量分）”；其余没有虚构视频分数。全部人工评价保持空白，共享单元格为共同初筛结果，不是独立多人评分记录。
 
 已验证飞书云端保存、21／18记录数、封面缩略图、原生满意度选项和一条完整历史评分记录。分享状态仍为“仅协作者可访问”，链接分享未开启，未扩大权限或给他人发送消息；负责人需由所有者邀请为可编辑协作者。本次未调用付费TikHub或改动网站代码、采集调度和评分门槛。交付文件及证据位于`output/overseas-review-demo-2026-10-23/`，最终配置截图为`feishu-review-configured.jpg`，状态见`progress.json`。
+
+## 2026年10月31日 主线补回栏目入口
+
+线上 `https://3chot.online/overseas` 与 `/api/site/overseas-operations`、`/api/site/overseas-operations/creators`、`/api/site/overseas-design-resources` 已在运行。GitHub `main` 以及 `cursor/initial-import-d340`、`cursor/home-fold-demote-three-2101` 都没有对应实现；`output/overseas-*/source/` 快照也没有进仓库。本机不能 SSH 到 `/opt/3chot`，因此主线补的是与线上契约一致的入口，不是生产筛选和采集代码。
+
+已补路径：
+
+- `apps/web/app/routes/overseas.tsx`：`/overseas`，`focus=official|competitor|creator|design`，达人页另有 `view=profiles`。
+- `packages/backend/src/publication/overseas.ts`：运营时间线与红人观察的读取层。
+- `packages/backend/src/publication/overseas-design.ts`：设计参考读取层。目录里记下 BP&O `https://bpando.org/feed/` 与 Yanko `https://www.yankodesign.com/feed/`，公开响应不含采集地址。
+- `packages/contracts/src/overseas.ts`、`industry/overseas-brands.ts`、`industry/features.ts` 的 `overseas` 开关。
+- 导航、更多页、sitemap、`llms.txt`、冒烟检查接到同一开关。
+
+当前三个接口返回线上的字段和筛选规则，条目列表为空：官方来源与设计目录只有说明，没有 `lastOkAt`，也没有卡片。未知 `focus=design`（应走设计接口）、`mode`、`marketScope` 和游标会拒绝；未知品牌原样返回。后续独立 RSS 应写入现有设计读取层，不要再开一条公开路由。
+
+仍须从 `/opt/3chot` 拷回才能与线上一致，不能用这份主线覆盖生产：
+
+- 运营时间线的查询、焦点/市场/品牌/精选筛选、`ops1` 游标分页，以及卡片上的 `overseas`、`social`、`video` 标注。
+- TikHub 与 YouTube 采集、预算回执、观察账号名单、红人聚合（`/creators` 现为 0 条）。
+- 设计素材快照与 RSS 采集结果（线上 BP&O、Yanko 的条目、封面和 `checkedAt`）。
+- 封面代理、视频概况、品牌推广标注，以及只存在于服务器上的迁移或任务调度。
+
+`docs/overseas-operations-decisions.md` 里各日快照仍是当时的发布记录；那些 `output/` 目录不在 git 中。

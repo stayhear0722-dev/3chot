@@ -1,4 +1,5 @@
-// 可选模块。它们只对 AI 行业有意义：做别的行业时两项都设为 false，或者按 docs/customize.md 整块删掉。
+// 可选模块。模型榜和 Codex 重置只对 AI 行业有意义；海外运营是本站的栏目。
+// 做别的行业时把不需要的项设为 false，或者按 docs/customize.md 整块删掉。
 // 关掉以后：导航里不再出现入口，对应的定时任务不再运行，页面与接口返回 404。
 
 export const FEATURES = {
@@ -6,4 +7,6 @@ export const FEATURES = {
   leaderboard: true,
   /** Codex 重置监控：盯 OpenAI Codex 负责人在 X 上的额度重置公告（/codex-reset）。需要 SocialData。 */
   codexResetMonitor: true,
+  /** 海外运营栏目（/overseas）。做别的行业时关掉。采集与筛选实现仍以服务器上的副本为准。 */
+  overseas: true,
 } as const;
