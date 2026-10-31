@@ -113,6 +113,11 @@ function RssTab({ base }: { base: string }) {
     ["精选全文", "与精选摘要相同的最新 50 条；只对明确允许再分发的来源内联正文。", "/feed/full.xml"],
     ["最近 7 天全部动态", "最近 7 天公开动态，按真实发布时间倒序。", "/feed/all.xml"],
     [withSubject("日报"), `每天 08:00 北京时间发布的${withSubject("日报")}，保留最近 30 期。`, "/feed/daily.xml"],
+    ["海外运营 · 全部情报", "与 /overseas 全部动态一致的最新 50 条。", "/feed/overseas.xml"],
+    ["海外运营 · 官方活动与政策", "与 /overseas?focus=official 全部动态一致。", "/feed/overseas/official.xml"],
+    ["海外运营 · 产品与品牌", "与 /overseas?focus=competitor 全部动态一致。", "/feed/overseas/competitor.xml"],
+    ["海外运营 · 红人与新作品", "与 /overseas?focus=creator 全部动态一致，按原帖发布时间保留最近 7 天。", "/feed/overseas/creator.xml"],
+    ["海外运营 · 设计素材", "与 /overseas?focus=design 一致。条目链接指向原作。", "/feed/overseas/design.xml"],
   ];
   const categories = CATEGORY_KEYS.join("|");
   return (

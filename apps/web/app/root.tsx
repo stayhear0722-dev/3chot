@@ -1,3 +1,4 @@
+import { OVERSEAS_FEED_LABELS, overseasFeedFocusFromSearch, overseasFeedPath, overseasFeedTitle } from "@aihot/contracts/overseas-feeds";
 import { titled } from "./lib/seo";
 import { SITE } from "@aihot/industry/site";
 import {
@@ -67,7 +68,7 @@ export function meta({ error }: Route.MetaArgs) {
 }
 
 /** Sidebar, main column and phone tab bar around a page (or an error). */
-function SiteShell({ changelogVersion, children }: { changelogVersion: string | null; children: ReactNode }) {
+function SiteShell({ changelogVersion, overseasFeed, children }: { changelogVersion: string | null; overseasFeed?: { href: string; label: string } | null; children: ReactNode }) {
   const navigation = useNavigation();
   return (
     <div className="flex min-h-dvh">
@@ -79,7 +80,14 @@ function SiteShell({ changelogVersion, children }: { changelogVersion: string | 
       {/* Mobile shell (≤ 960px): one centred column, the tab bar below. Desktop: the page fills the main area
           up to the list width (--page-max-wide), centred beyond it. */}
       <main id="main" className="min-w-0 flex-1 pb-[calc(72px+env(safe-area-inset-bottom))] lg:px-7 lg:pb-[72px] lg:pt-6">
-        <div className="mx-auto w-full max-w-[640px] px-4 lg:max-w-[var(--page-max-wide)] lg:px-0">{children}</div>
+        <div className="mx-auto w-full max-w-[640px] px-4 lg:max-w-[var(--page-max-wide)] lg:px-0">
+          {overseasFeed && (
+            <p className="mb-3 text-right text-[12px] text-ink-4">
+              <a href={overseasFeed.href} className="text-accent hover:underline">RSS · {overseasFeed.label}</a>
+            </p>
+          )}
+          {children}
+        </div>
       </main>
       <MobileTabBar changelogVersion={changelogVersion} />
       <BackToTop />
@@ -90,11 +98,16 @@ function SiteShell({ changelogVersion, children }: { changelogVersion: string | 
 export default function App() {
   const meta = useLoaderData<typeof loader>();
   useHydratedFlag();
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
   // The admin has its own chrome.
   if (pathname === "/admin" || pathname.startsWith("/admin/")) return <Outlet />;
+  const focus = pathname === "/overseas" ? overseasFeedFocusFromSearch(search) : null;
   return (
-    <SiteShell changelogVersion={meta.changelogVersion}>
+    <SiteShell
+      changelogVersion={meta.changelogVersion}
+      overseasFeed={focus ? { href: overseasFeedPath(focus), label: OVERSEAS_FEED_LABELS[focus] } : null}
+    >
+      {focus && <link rel="alternate" type="application/rss+xml" href={overseasFeedPath(focus)} title={overseasFeedTitle(focus)} />}
       <Outlet />
     </SiteShell>
   );
