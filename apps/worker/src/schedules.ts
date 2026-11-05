@@ -25,6 +25,7 @@ import { backupConfigured, runBackup } from "@aihot/backend/operations/backup";
 import { sourceHealthWeekly } from "@aihot/backend/operations/reports";
 import { markStalePendingReceipts } from "@aihot/backend/providers/receipts";
 import { markStaleDeliveries } from "@aihot/backend/notify/deliver";
+import { pushOverseas } from "@aihot/backend/notify/overseas";
 
 interface Scheduled {
   name: string;
@@ -71,6 +72,9 @@ export const SCHEDULES: Scheduled[] = [
   { name: "ops.digest", cron: "0 9 * * *", missed: "once", run: () => sendDigest() },
   // Feedback that did not reach the internal Feishu chat when it was sent (off with FEISHU_INTERNAL_ENABLED).
   { name: "feedback.forward", cron: "*/10 * * * *", run: () => forwardPendingFeedback() },
+  // Overseas official group. Missed slots are not caught up. The target stays disabled until
+  // setTargetEnabled refreshes enabled_at, and pushOverseas still applies the urgency gate.
+  { name: "notify.overseas", cron: "8,23,38,53 * * * *", missed: "skip", run: () => pushOverseas() },
   ...(backupConfigured() ? [{ name: "ops.backup", cron: "10 4 * * *", missed: "once" as const, run: () => runBackup() }] : []),
   { name: "reports.source-health", cron: "0 9 * * 1", missed: "once", run: () => sourceHealthWeekly() },
   // Four upstream checks a day; a new run is published only when the evidence changed. With collection
