@@ -5,6 +5,7 @@ import { sql } from "../db.ts";
 import { sha256 } from "../lib/ids.ts";
 import { itemUrl } from "../publication/links.ts";
 import { CATEGORY_LABELS, type CategoryKey } from "@aihot/contracts/taxonomy";
+import { youtubeVideoId } from "@aihot/contracts/youtube";
 import { deliverContent } from "./deliver.ts";
 import { SITE } from "@aihot/industry/site";
 
@@ -37,19 +38,23 @@ function normalizedTitle(t: string) {
   return t.toLowerCase().replace(/[\s\p{P}\p{S}]+/gu, "");
 }
 
-function card(r: Row) {
+export function card(r: Row) {
   const category = r.category ? CATEGORY_LABELS[r.category] : null;
+  // Interactive cards cannot play a remote video: Feishu media needs an uploaded file_key.
+  // This only jumps to the original URL. In-card playback is a later follow-up.
+  const video = youtubeVideoId(r.url) !== null;
   const lines = [r.summary, r.reason ? `**推荐理由**：${r.reason}` : null, `来源：${r.source_name}`].filter(Boolean);
   return {
     header: { title: { tag: "plain_text", content: r.title }, template: "turquoise" },
     elements: [
       ...(category ? [{ tag: "note", elements: [{ tag: "plain_text", content: category }] }] : []),
+      ...(video ? [{ tag: "note", elements: [{ tag: "plain_text", content: "视频" }] }] : []),
       { tag: "div", text: { tag: "lark_md", content: lines.join("\n\n") } },
       {
         tag: "action",
         actions: [
           { tag: "button", text: { tag: "plain_text", content: `${SITE.name} 查看` }, url: itemUrl(r.article_id), type: "primary" },
-          { tag: "button", text: { tag: "plain_text", content: "原文" }, url: r.url, type: "default" },
+          { tag: "button", text: { tag: "plain_text", content: video ? "看原视频" : "原文" }, url: r.url, type: "default" },
         ],
       },
     ],
